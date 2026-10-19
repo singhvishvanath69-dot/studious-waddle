@@ -1,0 +1,224 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Short Buy एडमिन</title><meta name="theme-color" content="#0f766e"><link rel="manifest" href="manifest.json"><style>
+*{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
+body{font-family:system-ui,"Noto Sans Devanagari",sans-serif;background:#f3f6f5;color:#12211f;line-height:1.5}
+header{position:sticky;top:0;background:#0f766e;color:#fff;padding:10px 14px;display:flex;gap:8px;align-items:center;z-index:5}
+header h1{font-size:20px;flex:1;font-weight:800}
+input,select,textarea,button{font:inherit;padding:10px;border-radius:8px;border:1px solid #c5d3d0;width:100%;background:#fff}
+input[type=radio],input[type=checkbox]{width:auto}
+label{display:flex;gap:8px;align-items:center}
+button{background:#0f766e;color:#fff;border:0;cursor:pointer}
+button:disabled{background:#9aa9a6}
+button.o{background:#fff;color:#0f766e;border:1px solid #0f766e}
+button.r{background:#b91c1c}
+header button,.sm{width:auto;padding:8px 12px}
+header button{background:#fff;color:#0f766e;font-weight:700}
+main{padding:12px 12px 90px;max-width:900px;margin:auto;display:flex;flex-direction:column;gap:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.c,.box{background:#fff;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;border:1px solid #dbe5e3}
+label.box{flex-direction:row;align-items:flex-start}
+.c img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:#e2ebe9}
+.c span{color:#b45309;font-weight:800}
+.c small{color:#4d6360;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.row{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.col{display:flex;flex-direction:column;gap:10px}
+#sh{position:fixed;inset:0;background:#0007;display:none;z-index:9}
+#sh>div{background:#fff;margin-top:6vh;height:94vh;border-radius:16px 16px 0 0;padding:14px;overflow:auto;display:flex;flex-direction:column;gap:8px}
+#sh>div>*{flex-shrink:0}
+.tl{display:flex;gap:2px;font-size:12px;text-align:center}
+.tl span{flex:1;padding:4px 2px;border-top:4px solid #c5d3d0;color:#6b7f7c}
+.tl .on{border-color:#0f766e;color:#0f766e;font-weight:700}
+.tag{font-size:13px;color:#4d6360}
+.pv{width:96px;border-radius:8px;object-fit:cover}
+.ph{display:flex;gap:6px;overflow-x:auto}
+.ph img{height:120px;border-radius:8px}
+.tabs{display:flex;gap:6px;overflow-x:auto}
+.tabs button{width:auto;white-space:nowrap;background:#fff;color:#0f766e;border:1px solid #0f766e}
+.tabs .on{background:#0f766e;color:#fff}
+.fab{position:fixed;right:16px;bottom:20px;width:56px;height:56px;border-radius:50%;font-size:30px;padding:0;box-shadow:0 3px 10px #0004;z-index:6}
+hr{border:0;border-top:1px dashed #9aa9a6}</style></head><body>
+<header><h1><a href="index.html" style="color:inherit;text-decoration:none">🛡️ Short Buy एडमिन</a></h1><button id="lb" class="sm">लॉगिन</button></header>
+<main>
+<div id="gate" class="box"><b>एडमिन लॉगिन</b><button onclick="login()">Google से लॉगिन</button></div>
+<div id="deny" class="box" hidden><b>आप एडमिन नहीं हैं</b><span>Firebase Console → Firestore में <code>admins</code> कलेक्शन बनाएँ और इस UID के नाम से एक डॉक्यूमेंट जोड़ें:</span><code id="uid" style="word-break:break-all"></code></div>
+<div id="app" hidden>
+<div id="st" class="grid"></div>
+<div id="tb" class="tabs" style="margin:10px 0"></div>
+<div id="v" class="col"></div>
+</div></main>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-analytics-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyCkblGm-Esda5VbOZYkpQpHsBePhxen8hk",authDomain:"psb-chtting.firebaseapp.com",projectId:"psb-chtting",storageBucket:"psb-chtting.firebasestorage.app",messagingSenderId:"689058791105",appId:"1:689058791105:web:e8a528524c004546415e40",measurementId:"G-F6VW5EGSHL"};
+firebase.initializeApp(firebaseConfig);
+try{firebase.analytics()}catch(e){}
+const db=firebase.firestore(),auth=firebase.auth();
+const $=s=>document.querySelector(s);
+const rs=n=>'₹'+Number(n||0).toLocaleString('en-IN');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const login=()=>auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+const ts=t=>t&&t.toDate?t.toDate().toLocaleDateString('hi-IN'):'';
+const arr=s=>s.docs.map(d=>({id:d.id,...d.data()})).sort((x,y)=>(y.createdAt?.seconds||0)-(x.createdAt?.seconds||0));
+const TL=['नया','पैक हुआ','भेजा गया','डिलीवर हुआ'];
+const tl=o=>o.status=='रद्द'?'<b>❌ रद्द</b>':`<div class="tl">${TL.map((t,k)=>`<span class="${k<=TL.indexOf(o.status)?'on':''}">${t}</span>`).join('')}</div>`;
+const imgs=p=>(p.imgs&&p.imgs.length?p.imgs:[p.img]).filter(Boolean);
+const fmt=a=>[a.vi,a.ci,a.di,a.st,a.pin].filter(Boolean).join(', ');
+const S=['नया','पैक हुआ','भेजा गया','डिलीवर हुआ','रद्द'];
+let U=null,O=[],P=[],R=new Set(),SL={},GC=[],AR=[],AK=[],USERS=[],BANS=[],SESSIONS=[],tab='o',unsub=[],AV={},FL={};
+const GS={pending:'⏳ मंजूरी बाकी',active:'✅ चालू',rejected:'❌ रिजेक्ट',disabled:'🚫 बंद',used:'✅ पूरा इस्तेमाल हो गया'};
+const LOG=t=>({t:Date.now(),text:t});
+const logHTML=o=>(o.log||[]).slice().sort((a,b)=>a.t-b.t).map(l=>`<span class="tag">🕒 ${new Date(l.t).toLocaleString('hi-IN')} — ${esc(l.text)}</span>`).join('');
+$('#lb').onclick=()=>U?auth.signOut():login();
+auth.onAuthStateChanged(async u=>{
+U=u;unsub.forEach(f=>f());unsub=[];
+$('#lb').textContent=u?'लॉगआउट':'लॉगिन';$('#gate').hidden=!!u;$('#app').hidden=true;$('#deny').hidden=true;
+if(!u)return;
+let ok=false;try{ok=(await db.collection('admins').doc(u.uid).get()).exists}catch(e){}
+if(!ok){$('#uid').textContent=u.uid;$('#deny').hidden=false;return}
+$('#app').hidden=false;
+unsub.push(
+db.collection('orders').onSnapshot(s=>{O=arr(s);draw()}),
+db.collection('products').onSnapshot(s=>{P=arr(s);draw()}),
+db.collection('receipts').onSnapshot(s=>{R=new Set(s.docs.map(d=>d.id));draw()}),
+db.collection('sellers').onSnapshot(s=>{SL={};s.docs.forEach(d=>SL[d.id]=d.data());draw()}),
+db.collection('giftCards').onSnapshot(s=>{GC=arr(s);draw()}),
+db.collection('apiGiftRequests').onSnapshot(s=>{AR=arr(s);draw()}),
+db.collection('apiClients').onSnapshot(s=>{AK=arr(s);draw()}),
+db.collection('bans').onSnapshot(s=>{BANS=arr(s);draw()}),
+db.collection('sessions').onSnapshot(s=>{SESSIONS=arr(s);draw()}));
+async function loadUsers(){
+const s=await db.collection('sellers').get(),c=await db.collection('users').get();
+USERS=[...arr(s).map(d=>({...d,type:'seller'})),...arr(c).map(d=>({...d,type:'customer'}))];draw()}
+setInterval(loadUsers,2000);
+});
+const amtO=o=>o.sellerAmount??o.total??0;
+function draw(){
+const pa=O.filter(o=>o.status=='डिलीवर हुआ'&&o.sellerState!='rejected'&&o.payStatus!='paid'),dn=O.filter(o=>o.payStatus=='paid'),rt=O.filter(o=>o.retStatus);
+$('#st').innerHTML=[['कुल ऑर्डर',O.length],['नए ऑर्डर',O.filter(o=>o.status=='नया').length],['प्रोडक्ट',P.length],['मंजूरी बाकी',P.filter(p=>p.public&&!p.approved).length],['सेलर',Object.keys(SL).length],['कुल बिक्री',rs(O.filter(o=>o.status!='रद्द').reduce((a,o)=>a+(o.total||0),0))],['सेलर को देना बाकी',rs(pa.reduce((a,o)=>a+amtO(o),0))],['रिटर्न बाकी',rt.filter(o=>o.retStatus!='done').length]].map(([k,v])=>`<div class="c"><span>${v}</span>${k}</div>`).join('');
+const gp=GC.filter(g=>g.status=='pending').length+AR.filter(a=>a.status=='pending').length;
+$('#tb').innerHTML=[['o','ऑर्डर'],['p','प्रोडक्ट'],['s','सेलर'],['u','👥 यूजर्स ('+USERS.length+')'],['b','पेमेंट बाकी ('+pa.length+')'],['d','पेमेंट पूरा ('+dn.length+')'],['ret','↩️ रिटर्न ('+rt.length+')'],['g','🎁 गिफ्ट कार्ड ('+gp+')']].map(([k,t])=>`<button class="${k==tab?'on':''}" onclick="tab='${k}';draw()">${t}</button>`).join('');
+$('#v').innerHTML=({o:orders,p:prods,s:sellers,u:usersTab,b:()=>pa.map(o=>payCard(o,0)).join('')||'कोई पेमेंट बाकी नहीं',d:()=>dn.map(o=>payCard(o,1)).join('')||'अभी कोई पेमेंट पूरा नहीं',ret:()=>rt.map(retCard).join('')||'कोई रिटर्न रिक्वेस्ट नहीं',g:giftTab})[tab]();
+}
+const SS={pending:'⏳ सेलर की मंजूरी बाकी',accepted:'✅ सेलर ने स्वीकार किया',rejected:'❌ सेलर ने अस्वीकार किया'};
+const orders=()=>O.map(o=>`<div class="box"><b>${esc(o.name)}</b> · ${esc(o.phone)}<span>${esc(o.address)}</span><span>${(o.items||[]).map(i=>esc(i.name)+(i.size?' ['+esc(i.size)+']':'')+' ×'+i.qty+' ('+esc(i.sellerName||'सेलर')+')').join(', ')}</span><b>${o.gcUsed?`कुल ${rs(o.total)} · 🎁 ${rs(o.gcUsed)} · <span style="color:#b91c1c">COD में लेना: ${rs(o.codAmount)}</span>`:rs(o.total)}</b><span class="tag">${SS[o.sellerState]||''}</span><button class="sm" onclick="cp('${o.id}')">📋 Delhivery के लिए कॉपी करें</button><div class="row"><input id="a_${o.id}" placeholder="Delhivery ट्रैकिंग नंबर (AWB)" value="${esc(AV[o.id]??o.awb??'')}" oninput="AV['${o.id}']=this.value"><button class="sm" onclick="saveAwb('${o.id}')">सेव</button></div><span class="tag">📄 Delhivery की रसीद (PDF)${o.labelReady?' — ✅ सेलर को भेजी जा चुकी है (नई चुनेंगे तो बदल जाएगी)':' — सेलर को भेजने के लिए चुनें'}</span><input type="file" accept="application/pdf" onchange="FL['${o.id}']=this.files[0]">${FL[o.id]?`<span class="tag">📄 ${esc(FL[o.id].name)} चुनी गई</span>`:''}<select onchange="st('${o.id}',this.value)">${S.map(x=>`<option ${x==o.status?'selected':''}>${x}</option>`).join('')}</select>${o.status=='डिलीवर हुआ'?[...new Set((o.items||[]).map(i=>i.sellerId))].map(sid=>R.has(o.id+'_'+sid)?'<span class="tag">✅ डिलीवरी रसीद सेलर को भेजी जा चुकी है</span>':`<button onclick="sendR('${o.id}','${sid}')">🧾 सेलर को डिलीवरी रसीद भेजें</button>`).join(''):''}${o.status=='डिलीवर हुआ'&&(!o.deliveredAt||!o.retOK)?`<button class="sm o" onclick="fixRet('${o.id}')">🔧 रिटर्न ऑप्शन चालू करें</button>`:''}${logHTML(o)}</div>`).join('')||'अभी कोई ऑर्डर नहीं';
+const prods=()=>[...P].sort((a,b)=>(a.approved?1:0)-(b.approved?1:0)).map(p=>`<div class="box"><div class="row"><img class="pv" style="width:64px" src="${esc(imgs(p)[0])}" alt=""><span style="flex:1">${p.public&&!p.approved?'🆕 ':''}<b>${esc(p.name)}</b><br><span class="tag">${esc(p.sellerName)} · ${p.public?(p.approved?'✅ शॉप में लाइव':'⏳ मंजूरी बाकी'):'🔒 Private (सेलर ने छिपाया)'} · स्टॉक ${p.stock} (बिका ${p.sold||0})</span></span></div><span class="tag">सेलर की कीमत: ${rs(p.price)} (सेलर को यही मिलेगी)</span><div class="row"><input id="sp_${p.id}" type="number" value="${p.salePrice||p.price}"><button class="sm" onclick="setP('${p.id}')">${p.approved?'कीमत सेव':'✅ कीमत सेव करके मंजूर करें'}</button></div>${p.approved?`<button class="sm o" onclick="hideP('${p.id}')">🙈 शॉप से छिपाएँ</button>`:''}<button class="sm r" onclick="delP('${p.id}')">हटाएँ</button></div>`).join('')||'अभी कोई प्रोडक्ट नहीं';
+const sellers=()=>Object.entries(SL).map(([id,s])=>`<div class="box"><b>${esc(s.shop)}</b><span>${esc(s.gname)} · ${esc(s.email)}</span><span>मोबाइल: ${esc(s.mobile)}</span><span>पता: ${esc(s.addrText)}</span><span>A/c: ${esc(s.acc)} · IFSC: ${esc(s.ifsc)}</span><span class="tag">${P.filter(p=>p.sellerId==id).length} प्रोडक्ट · जुड़ा: ${ts(s.createdAt)}</span></div>`).join('')||'अभी कोई सेलर नहीं जुड़ा';
+const payCard=(o,paid)=>{const sl=SL[(o.sellerIds||[])[0]]||{},it=(o.items||[])[0]||{},p=P.find(x=>x.id==it.id)||{};
+return `<div class="box"><div class="row"><img class="pv" style="width:64px" src="${esc(imgs(p)[0])}" alt=""><span style="flex:1"><b>${esc(it.name)}</b> ×${it.qty}<br><span class="tag">${esc(p.desc)}</span></span><b>${rs(amtO(o))}</b></div><span>सेलर: ${esc(sl.shop||it.sellerName)} · ${esc(sl.email)}</span><span>A/c: ${esc(sl.acc)} · IFSC: ${esc(sl.ifsc)}</span>${paid?`<b>UTR: ${esc(o.utr)}</b>`:`<button onclick="payDone('${o.id}')">✅ पूरा हुआ</button>`}</div>`};
+function fixRet(id){const u={retOK:true,log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने रिटर्न ऑप्शन चालू किया'))};const o=O.find(x=>x.id==id);if(!o.deliveredAt)u.deliveredAt=firebase.firestore.FieldValue.serverTimestamp();
+db.collection('orders').doc(id).update(u).then(()=>alert('रिटर्न ऑप्शन चालू हो गया, ग्राहक अब \'मेरे ऑर्डर\' में देख पाएगा ✅')).catch(e=>alert(e.message))}
+function payDone(id){const u=prompt('UTR नंबर डालें');if(!u||!u.trim())return;db.collection('orders').doc(id).update({payStatus:'paid',utr:u.trim(),paidAt:firebase.firestore.FieldValue.serverTimestamp(),log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने सेलर को पेमेंट भेजा'))}).catch(e=>alert('सेव नहीं हुआ: '+e.message))}
+function retCard(o){const it=(o.items||[])[0]||{},sl=SL[(o.sellerIds||[])[0]]||{};
+return `<div class="box"><b>${esc(o.name)}</b> · ${esc(o.phone)}<span class="tag">📍 डिलीवरी पता: ${esc(o.address)}</span><span class="tag">↩️ सेलर का Return पता: ${esc(o.retAddr||sl.addrText||'')}</span><span>${esc(it.name)}${it.size?' ['+esc(it.size)+']':''} ×${it.qty} · ${rs(amtO(o))}</span><span>कारण: ${esc(o.retReason)}</span>
+${o.retStatus=='requested'?`<div class="row"><input id="pk_${o.id}" placeholder="पिकअप AWB नंबर"><button class="sm" onclick="retPickup('${o.id}')">पिकअप हुआ</button></div>`:''}
+${o.retStatus=='pickup'||o.retStatus=='done'?`<span class="tag">🚚 पिकअप AWB: ${esc(o.retPickupAwb)}</span><span>रिफंड खाता — A/c: ${esc(o.retBank?.acc)} · IFSC: ${esc(o.retBank?.ifsc)}</span>`:''}
+${o.retStatus=='pickup'?`<button onclick="retPay('${o.id}')">✅ रिफंड पूरा हुआ</button>`:''}
+${o.retStatus=='done'?`<b>✅ पेमेंट हो गया</b><span>UTR: ${esc(o.retUtr)} · दिनांक: ${ts(o.retPaidAt)}</span><hr><b>सेलर</b><span>${esc(sl.shop)} · ${esc(sl.email)}</span><span>A/c: ${esc(sl.acc)} · IFSC: ${esc(sl.ifsc)}</span>`:''}
+${logHTML(o)}</div>`}
+function retPickup(id){const v=$('#pk_'+id).value.trim();if(!v)return alert('पिकअप AWB डालें');
+db.collection('orders').doc(id).update({retStatus:'pickup',retPickupAwb:v,retPickupAt:firebase.firestore.FieldValue.serverTimestamp(),log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने रिटर्न पिकअप दर्ज किया'))}).catch(e=>alert(e.message))}
+function retPay(id){const u=prompt('रिफंड UTR नंबर डालें');if(!u||!u.trim())return;
+db.collection('orders').doc(id).update({retStatus:'done',retUtr:u.trim(),retPaidAt:firebase.firestore.FieldValue.serverTimestamp(),log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने रिफंड पूरा किया'))}).catch(e=>alert('सेव नहीं हुआ: '+e.message))}
+function setP(id){const v=+$('#sp_'+id).value;if(!v)return alert('सही कीमत डालें');db.collection('products').doc(id).update({salePrice:v,priceSet:true,approved:true}).catch(e=>alert(e.message))}
+function hideP(id){db.collection('products').doc(id).update({approved:false}).catch(e=>alert(e.message))}
+function delP(id){if(confirm('यह प्रोडक्ट हटाएँ?'))db.collection('products').doc(id).delete()}
+function st(id,v){const o=O.find(x=>x.id==id),b=db.batch(),u={status:v,log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने स्टेटस बदला: '+v))};
+if(v=='डिलीवर हुआ'&&!o.deliveredAt)u.deliveredAt=firebase.firestore.FieldValue.serverTimestamp();
+b.update(db.collection('orders').doc(id),u);
+if(o.sellerState&&(v=='रद्द')!=(o.status=='रद्द'))(o.items||[]).forEach(i=>{if(P.some(p=>p.id==i.id))b.update(db.collection('products').doc(i.id),{sold:firebase.firestore.FieldValue.increment(v=='रद्द'?-i.qty:i.qty)})});
+b.commit().catch(e=>alert(e.message))}
+function cp(id){const o=O.find(x=>x.id==id),t='नाम: '+o.name+'\nमोबाइल: '+o.phone+'\nपता: '+o.address+'\nसामान: '+o.items.map(i=>i.name+(i.size?' ['+i.size+']':'')+' ×'+i.qty).join(', ')+'\nCOD रकम: '+(o.gcUsed?o.codAmount:o.total)+(o.gcUsed?' (गिफ्ट कार्ड से ₹'+o.gcUsed+' पहले ही इस्तेमाल हो चुका)':'');
+(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>alert('कॉपी हो गया ✅')).catch(()=>prompt('इसे कॉपी करें:',t))}
+async function saveAwb(id){const v=$('#a_'+id).value.trim(),f=FL[id],o=O.find(x=>x.id==id);
+if(!v)return alert('ट्रैकिंग नंबर (AWB) डालें');
+if(o.status=='रद्द'||(o.sellerState&&o.sellerState!='accepted'))return alert('पहले सेलर ऑर्डर स्वीकार करे');
+if(!f&&!o.labelReady)return alert('रसीद का PDF भी चुनें');
+if(f&&f.type!='application/pdf')return alert('सिर्फ PDF फाइल चुनें');
+if(f&&f.size>700*1024)return alert('PDF 700 KB से छोटी होनी चाहिए');
+try{const b=db.batch(),u={awb:v};
+if(['नया','पैक हुआ'].includes(o.status))u.status='भेजा गया';
+if(f){const pdf=await new Promise((r,j)=>{const x=new FileReader();x.onload=()=>r(x.result);x.onerror=j;x.readAsDataURL(f)});
+b.set(db.collection('labels').doc(id),{orderId:id,sellerIds:o.sellerIds,awb:v,pdf,createdAt:firebase.firestore.FieldValue.serverTimestamp()});u.labelReady=true}
+else b.update(db.collection('labels').doc(id),{awb:v});
+b.update(db.collection('orders').doc(id),u);await b.commit();delete FL[id];delete AV[id];alert('सेव हो गया ✅ रसीद सेलर को मिल गई')}catch(e){alert('सेव नहीं हुआ: '+e.message)}}
+function sendR(oid,sid){const o=O.find(x=>x.id==oid),it=o.items.filter(i=>i.sellerId==sid);
+db.collection('receipts').doc(oid+'_'+sid).set({orderId:oid,sellerId:sid,sellerName:it[0]?.sellerName||'',items:it,amount:it.reduce((a,i)=>a+(i.sp??i.price)*i.qty,0),customer:o.name,address:o.address,sentBy:U.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(e=>alert('रसीद नहीं गई: '+e.message))}
+const sellerDue=id=>O.filter(o=>o.status=='डिलीवर हुआ'&&o.sellerState!='rejected'&&o.payStatus!='paid'&&(o.sellerIds||[]).includes(id)).reduce((a,o)=>a+amtO(o),0);
+const FB_KEY='AIzaSyCkblGm-Esda5VbOZYkpQpHsBePhxen8hk';
+function claimLink(code){const p=location.pathname.replace(/\/[^/]*$/,'/shop.html');return location.origin+p+'?gc='+code}
+function waSend(phone,recipientName,senderName,code,amount){
+const p=(phone||'').replace(/\D/g,''),num=p.length==10?'91'+p:p;
+const msg='🎁 आपको एक गिफ्ट कार्ड मिला है!\n\nनमस्ते '+(recipientName||'')+' जी,\n\n'+senderName+' की तरफ़ से आपके लिए ₹'+amount+' का गिफ्ट कार्ड भेजा गया है। 🎉\n\n🔖 गिफ्ट कार्ड नंबर: '+code+'\n💰 कीमत: ₹'+amount+'\n\n👉 अभी शॉपिंग करें और इसका इस्तेमाल करें:\n'+claimLink(code)+'\n\nधन्यवाद\nटीम PSB कंपनी';
+if(!num)return alert('मोबाइल नंबर सही नहीं है — कोड मैन्युअल भेजें: '+code);
+window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank')}
+function usersTab(){
+const userCard=u=>{
+const ban=BANS.find(b=>b.uid==u.id&&b.expiryTime.toDate()>Date.now()),sess=SESSIONS.filter(s=>s.uid==u.id);
+const lastSess=sess.slice().sort((a,b)=>b.lastActivity.toDate()-a.lastActivity.toDate())[0];
+const lastOnline=lastSess?new Date(lastSess.lastActivity.toDate()).toLocaleString('hi-IN'):'कभी नहीं',onlineNow=lastSess&&Date.now()-lastSess.lastActivity.toDate()<60000?'🟢 अभी अभी':'🔴 ऑफ़लाइन';
+const totalTime=(sess||[]).reduce((a,s)=>{const st=s.startTime.toDate(),en=new Date(Math.min(Date.now(),s.lastActivity.toDate()+30000));return a+(en-st)/1000},0);
+return `<div class="box"><div class="row"><span style="flex:1"><b>${esc(u.nm||u.shop||u.name||'?')} ${onlineNow}</b><br><span class="tag">${u.type=='seller'?'🏪 सेलर':'👤 ग्राहक'}</span>${ban?`<span class="tag" style="background:#fca5a5">🚫 बैन: ${esc(ban.reason)}</span>`:''}</span></div>
+${u.type=='seller'?`<span>दुकान: ${esc(u.shop||'?')}</span><span>मोबाइल: ${esc(u.mobile||'?')}</span><span>पता: ${esc(u.addrText||'?')}</span>`:` <span>ईमेल: ${esc(u.email||'?')}</span><span>मोबाइल: ${esc(u.phone||'?')}</span><span>पता: ${esc((u.addrs||[])[0]?.address||'?')}</span>`}
+<span class="tag">अंतिम ऑनलाइन: ${lastOnline}</span>
+<span class="tag">कुल ऑनलाइन समय: ${Math.floor(totalTime/3600)}h ${Math.floor((totalTime%3600)/60)}m</span>
+<div class="row">${ban?`<button class="sm o" onclick="banRemove('${u.id}')">बैन हटाएँ</button>`:`<button class="sm r" onclick="banUI('${u.id}')">🚫 बैन करें</button>`}<button class="sm r" onclick="userDelete('${u.id}')">❌ डिलीट करें</button></div></div>`};
+return `<div class="box col"><b>कुल यूजर्स: ${USERS.length} (सेलर: ${USERS.filter(u=>u.type=='seller').length}, ग्राहक: ${USERS.filter(u=>u.type=='customer').length})</b></div>
+${USERS.map(userCard).join('')||'कोई यूजर नहीं'}`}
+function banUI(uid){const d=prompt('कितने दिन के लिए बैन करें?')||'1';const r=prompt('कारण (वैकल्पिक)')||'';
+if(!d)return;const days=+d;if(!days||days<0.5)return alert('सही संख्या डालें');
+banApply(uid,r,days)}
+function banApply(uid,reason,days){const exp=new Date(Date.now()+days*86400000);
+db.collection('bans').add({uid,reason:reason||'कोई कारण नहीं',days,bannedAt:firebase.firestore.FieldValue.serverTimestamp(),expiryTime:firebase.firestore.Timestamp.fromDate(exp)})
+.then(()=>alert('✅ बैन हो गया '+days+' दिन के लिए')).catch(e=>alert(e.message))}
+function banRemove(uid){const b=BANS.find(x=>x.uid==uid&&x.expiryTime.toDate()>Date.now());if(!b)return;
+db.collection('bans').doc(b.id).delete().then(()=>alert('✅ बैन हटा दिया')).catch(e=>alert(e.message))}
+function userDelete(uid){if(!confirm('इस यूजर को पूरी तरह डिलीट कर दें? यह reversible नहीं है।'))return;
+const u=USERS.find(x=>x.id==uid);
+if(u.type=='seller')db.collection('sellers').doc(uid).delete().catch(e=>alert(e.message));
+else db.collection('users').doc(uid).delete().catch(e=>alert(e.message));
+alert('डिलीट के लिए भेज दिया')}
+function giftTab(){
+const pend=GC.filter(g=>g.status=='pending'),rest=GC.filter(g=>g.status!='pending'),apend=AR.filter(a=>a.status=='pending'),arest=AR.filter(a=>a.status!='pending');
+const sellerCard=g=>{const sl=SL[g.sellerId]||{};return `<div class="box"><b>🎁 ${rs(g.amount)}</b><span class="tag">${GS[g.status]||g.status} · ${ts(g.createdAt)}</span>${g.recipientName?`<span class="tag">किसे: ${esc(g.recipientName)} · ${esc(g.recipientPhone)}${g.recipientAddress?' · '+esc(g.recipientAddress):''}</span>`:''}${g.message?`<span class="tag">मेसेज: ${esc(g.message)}</span>`:''}
+<hr><b>सेलर की पूरी डिटेल</b><span>${esc(sl.shop)} · ${esc(sl.gname)} · ${esc(sl.email)}</span><span>मोबाइल: ${esc(sl.mobile)}</span><span>पता: ${esc(sl.addrText)}</span><span>A/c: ${esc(sl.acc)} · IFSC: ${esc(sl.ifsc)}</span><b>इस सेलर का टोटल पेंडिंग पेमेंट: ${rs(sellerDue(g.sellerId))}</b>
+${g.status=='pending'?`<div class="row"><button class="r" onclick="gcReject('${g.id}')">❌ रिजेक्ट</button><button onclick="gcApprove('${g.id}')">✅ मंजूर करें (WhatsApp भेजेगा)</button></div>`:''}
+${g.status=='active'||g.status=='used'?`<span class="tag">बाकी बैलेंस: ${rs(g.balance)}</span><div class="row"><code style="flex:1;word-break:break-all">${esc(g.id)}</code><button class="sm" onclick="gcCopy('${g.id}')">📋 कॉपी</button></div><button class="sm r" onclick="gcDisable('${g.id}')">🚫 बंद करें</button>`:''}
+${g.status=='rejected'&&g.rejectReason?`<span class="tag">कारण: ${esc(g.rejectReason)}</span>`:''}</div>`};
+const apiCard=a=>{const ak=AK.find(x=>x.id==a.apiKey)||{};return `<div class="box"><b>🔑 API रिक्वेस्ट: ${rs(a.amount)}</b><span class="tag">${a.status=='pending'?'⏳ मंजूरी बाकी':a.status=='approved'?'✅ मंजूर हुआ':'❌ रिजेक्ट'} · ${ts(a.createdAt)}</span>
+<span class="tag">किसे: ${esc(a.recipientName)} · ${esc(a.recipientPhone)}${a.recipientAddress?' · '+esc(a.recipientAddress):''}</span>
+<hr><b>ऐप की जानकारी</b><span>ऐप: ${esc(ak.appName||'?')} · भेजने वाला: ${esc(ak.ownerName||'?')}</span>
+${a.status=='pending'?`<div class="row"><button class="r" onclick="apiReject('${a.id}')">❌ रिजेक्ट</button><button onclick="apiApprove('${a.id}')">✅ मंजूर करें (WhatsApp भेजेगा)</button></div>`:''}
+${a.giftCode?`<span class="tag">गिफ्ट कोड: ${esc(a.giftCode)}</span>`:''}</div>`};
+return `<div class="box col"><b>🔑 नई API Key बनाएँ (दूसरे ऐप्स के लिए)</b><input id="akn" placeholder="नाम (आपका/संपर्क का)"><input id="aka" placeholder="ऐप का नाम"><button onclick="akCreate()">Key जनरेट करें</button></div>
+${AK.length?`<div class="box col"><b>मौजूदा API Keys</b>${AK.map(k=>`<div class="row"><span style="flex:1"><code style="word-break:break-all">${esc(k.id)}</code><br><span class="tag">${esc(k.appName)} · ${esc(k.ownerName)} · ${k.active?'✅ चालू':'🚫 बंद'}</span></span><button class="sm" onclick="gcCopy('${k.id}')">📋</button><button class="sm ${k.active?'r':''}" onclick="akToggle('${k.id}',${!k.active})">${k.active?'बंद करें':'चालू करें'}</button></div>`).join('')}</div>
+<div class="box"><b>बाहरी ऐप से रिक्वेस्ट कैसे भेजें</b><span class="tag">नीचे दिया कोड अपने दूसरे ऐप में चलाएँ (apiKey की जगह ऊपर वाली key डालें):</span><pre style="white-space:pre-wrap;font-size:12px;background:#f3f4f6;padding:8px;border-radius:6px">fetch('https://firestore.googleapis.com/v1/projects/psb-chtting/databases/(default)/documents/apiGiftRequests?key=${FB_KEY}',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{apiKey:{stringValue:'यहाँ API Key डालें'},amount:{integerValue:500},recipientName:{stringValue:'नाम'},recipientPhone:{stringValue:'9XXXXXXXXX'},recipientAddress:{stringValue:'पता (वैकल्पिक)'},status:{stringValue:'pending'}}})})</pre></div>`:''}
+${apend.length?`<b>🔑 API से आई मंजूरी की रिक्वेस्ट (${apend.length})</b>`+apend.map(apiCard).join(''):''}
+${arest.length?`<b>🔑 बाकी API रिक्वेस्ट</b>`+arest.map(apiCard).join(''):''}
+<div class="box col"><b>🎁 सीधे नया गिफ्ट कार्ड बनाएँ (कंपनी की तरफ से)</b><input id="gaa" type="number" placeholder="रकम (₹)"><input id="gan" placeholder="जिसे भेजना है — उसका नाम"><input id="gap" type="tel" placeholder="उसका WhatsApp मोबाइल नंबर"><input id="gaad" placeholder="उसका पता"><textarea id="gam" rows="2" placeholder="मेसेज (वैकल्पिक)"></textarea><button onclick="gcAdminCreate()">बनाएँ, चालू करें और WhatsApp भेजें</button></div>
+${pend.length?`<b>सेलर से मंजूरी के लिए आए हुए (${pend.length})</b>`+pend.map(sellerCard).join(''):''}
+<b>बाकी सभी गिफ्ट कार्ड</b>${rest.map(sellerCard).join('')||'अभी कोई गिफ्ट कार्ड नहीं'}`}
+function gcApprove(code){const g=GC.find(x=>x.id==code);
+db.collection('giftCards').doc(code).update({status:'active',approvedAt:firebase.firestore.FieldValue.serverTimestamp(),expiryDate:new Date(Date.now()+365*86400000),log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने गिफ्ट कार्ड मंजूर किया'))}).then(()=>waSend(g.recipientPhone,g.recipientName,g.sellerShop||'सेलर',code,g.amount)).catch(e=>alert(e.message))}
+function gcReject(code){const r=prompt('रिजेक्ट करने का कारण (वैकल्पिक)')||'';db.collection('giftCards').doc(code).update({status:'rejected',rejectReason:r,log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने रिजेक्ट किया: '+r))}).catch(e=>alert(e.message))}
+function gcDisable(code){if(!confirm('यह गिफ्ट कार्ड बंद करें? इसके बाद इससे शॉपिंग नहीं हो सकेगी'))return;
+db.collection('giftCards').doc(code).update({status:'disabled',log:firebase.firestore.FieldValue.arrayUnion(LOG('एडमिन ने गिफ्ट कार्ड बंद किया'))}).catch(e=>alert(e.message))}
+async function gcAdminCreate(){const n=+$('#gaa').value,gn=$('#gan').value.trim(),gp=$('#gap').value.trim();if(!n||n<1)return alert('सही रकम डालें');if(!gn)return alert('नाम डालें');if(!gp)return alert('मोबाइल नंबर डालें');
+const code='GC'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,7).toUpperCase();
+try{await db.collection('giftCards').doc(code).set({amount:n,balance:n,status:'active',createdBy:'admin',sellerId:null,recipientName:gn,recipientPhone:gp,recipientAddress:$('#gaad').value.trim(),message:$('#gam').value.trim(),approvedAt:firebase.firestore.FieldValue.serverTimestamp(),expiryDate:new Date(Date.now()+365*86400000),log:[LOG('एडमिन ने गिफ्ट कार्ड बनाया')],createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+waSend(gp,gn,'P.S.B Company',code,n);
+$('#gaa').value='';$('#gan').value='';$('#gap').value='';$('#gaad').value='';$('#gam').value='';draw();alert('बन गया ✅ कोड नीचे लिस्ट में मिलेगा')}catch(e){alert('नहीं बना: '+e.message)}}
+function gcCopy(code){(navigator.clipboard?navigator.clipboard.writeText(code):Promise.reject()).then(()=>alert('कोड कॉपी हो गया ✅')).catch(()=>prompt('इसे कॉपी करें:',code))}
+async function akCreate(){const n=$('#akn').value.trim(),a=$('#aka').value.trim();if(!n||!a)return alert('दोनों फ़ील्ड भरें');
+const key='sbk_'+Date.now().toString(36)+Math.random().toString(36).slice(2,12);
+try{await db.collection('apiClients').doc(key).set({ownerName:n,appName:a,active:true,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+$('#akn').value='';$('#aka').value='';prompt('यह रही आपकी API Key — इसे कॉपी करके सुरक्षित रखें:',key)}catch(e){alert('नहीं बनी: '+e.message)}}
+function akToggle(key,v){db.collection('apiClients').doc(key).update({active:v}).catch(e=>alert(e.message))}
+function apiApprove(id){const a=AR.find(x=>x.id==id),ak=AK.find(x=>x.id==a.apiKey)||{};
+const code='GC'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,7).toUpperCase();
+db.collection('giftCards').doc(code).set({amount:a.amount,balance:a.amount,status:'active',createdBy:'api',sellerId:null,appName:ak.appName||'',recipientName:a.recipientName,recipientPhone:a.recipientPhone,recipientAddress:a.recipientAddress||'',approvedAt:firebase.firestore.FieldValue.serverTimestamp(),expiryDate:new Date(Date.now()+365*86400000),log:[LOG('API रिक्वेस्ट से बना ('+(ak.appName||'')+')')],createdAt:firebase.firestore.FieldValue.serverTimestamp()})
+.then(()=>db.collection('apiGiftRequests').doc(id).update({status:'approved',giftCode:code,approvedAt:firebase.firestore.FieldValue.serverTimestamp()}))
+.then(()=>waSend(a.recipientPhone,a.recipientName,ak.appName||'Short Buy',code,a.amount)).catch(e=>alert(e.message))}
+function apiReject(id){const r=prompt('रिजेक्ट करने का कारण (वैकल्पिक)')||'';db.collection('apiGiftRequests').doc(id).update({status:'rejected',rejectReason:r}).catch(e=>alert(e.message))}
+</script></body></html>
